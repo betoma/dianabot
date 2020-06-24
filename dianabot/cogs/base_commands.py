@@ -7,14 +7,16 @@ import random
 from dianabot.utils import misc
 
 import logging
-log = logging.getLogger('discord')
+
+log = logging.getLogger("discord")
+
 
 class Information(commands.Cog):
-    def __init__(self,bot):
+    def __init__(self, bot):
         self.bot = bot
-        
+
     @commands.command(name="perms")
-    async def perms(self, ctx, user:discord.User):
+    async def perms(self, ctx, user: discord.User):
         """
         Usage:
             {command_prefix}perms (@MentionedUser)
@@ -45,11 +47,11 @@ class Information(commands.Cog):
                 if user.bot:
                     perms_message += " (and a bot)"
                 perms_message += "."
-        
+
         perms_message = ctx.author.mention + ", " + perms_message
 
         await ctx.send(perms_message)
-    
+
     @commands.command(name="ping")
     async def ping(self, ctx):
         """
@@ -63,7 +65,7 @@ class Information(commands.Cog):
         after = time.monotonic()
         ping = (after - before) * 1000
         await ping_msg.edit(content=f"Pong! (took {ping:.0f}ms)")
-    
+
     @commands.command(name="uptime")
     async def uptime(self, ctx):
         """
@@ -77,9 +79,11 @@ class Information(commands.Cog):
         h, m = divmod(m, 60)
         d, h = divmod(h, 24)
         w, d = divmod(d, 7)
-        await ctx.send(f"I've been online for `{int(w)}w : {int(d)}d : {int(h)}d : {int(h)}h : {int(m)}m : {int(s)}s")
-    
-    @commands.command(aliases=["user","userinfo"])
+        await ctx.send(
+            f"I've been online for `{int(w)}w : {int(d)}d : {int(h)}d : {int(h)}h : {int(m)}m : {int(s)}s"
+        )
+
+    @commands.command(aliases=["user", "userinfo"])
     async def playerinfo(self, ctx, user: discord.Member = None):
         """
         Usage:
@@ -89,8 +93,8 @@ class Information(commands.Cog):
         """
         if not user:
             user = ctx.author
-        
-        roles = [role.name.replace("@","@\u200b") for role in user.roles]
+
+        roles = [role.name.replace("@", "@\u200b") for role in user.roles]
         msg = [
             ("Name", user.name),
             ("Discrim", user.discriminator),
@@ -98,11 +102,11 @@ class Information(commands.Cog):
             ("Joined at", user.joined_at),
             ("Created at", user.created_at),
             ("Server Roles", ", ".join(roles)),
-            ("Status", user.status)
+            ("Status", user.status),
         ]
         await ctx.send(misc.neatly(msg))
-    
-    @commands.command(aliases=["server","serverinfo"])
+
+    @commands.command(aliases=["server", "serverinfo"])
     async def serverinfo(self, ctx):
         """
         Usage:
@@ -119,15 +123,16 @@ class Information(commands.Cog):
             ("Owner", server.owner),
             ("Member Count", len(server.members)),
             ("Role Count", len(server.roles)),
-            ("Icon", server.icon_url)
+            ("Icon", server.icon_url),
         ]
 
         await ctx.send(misc.neatly(msg))
-    
+
+
 class Choices(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-    
+
     @commands.command(name="choose")
     async def choose(self, ctx, *, text: str):
         """
@@ -145,7 +150,7 @@ class Choices(commands.Cog):
             elif choice_len > weight_len:
                 weight_co = sum(weights)
                 rem_dist = choice_len - weight_len
-                weight_div = (100-weight_co) // rem_dist
+                weight_div = (100 - weight_co) // rem_dist
                 weights.extend([weight_div] * rem_dist)
             the_choice = random.choices(choices, weights, k=1)
         else:
@@ -158,7 +163,7 @@ class Choices(commands.Cog):
             f"I mean, if you had a brain, you'd already know it's **{the_choice}**.",
             f"**{the_choice}**, of course.",
             f"It's {the_choice}, which you'd have known if you were actually good at this.",
-            f"The answer is {the_choice}!"
+            f"The answer is {the_choice}!",
         ]
         pick = random.choice(statement_options)
         await ctx.send(pick)
