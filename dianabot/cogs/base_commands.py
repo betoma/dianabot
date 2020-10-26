@@ -20,7 +20,7 @@ class Information(commands.Cog):
         """
         Usage:
             {command_prefix}perms (@MentionedUser)
-        
+
         Get the permissions of a mentioned user.
         """
         if user.id == self.bot.user.id:
@@ -57,7 +57,7 @@ class Information(commands.Cog):
         """
         Usage:
             {command_prefix}ping
-        
+
         Test the operation of the bot & its ping
         """
         before = time.monotonic()
@@ -88,7 +88,7 @@ class Information(commands.Cog):
         """
         Usage:
             {command_prefix}user, {command_prefix}userinfo
-        
+
         Gives info about a particular user. If a user isn't passed then the shown info is yours.
         """
         if not user:
