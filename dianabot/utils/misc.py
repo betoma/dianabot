@@ -73,3 +73,7 @@ def message_embed(msg):
         embed.set_footer(text=f"📄 Message has {number_rich_embed} rich embeds")
 
     return embed
+
+
+class missing_from_config(commands.CommandError):
+    pass

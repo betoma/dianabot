@@ -1,12 +1,12 @@
+import logging
+import random
+import time
+
 import discord
 from discord.ext import commands
 
-import time
-import random
-
 from dianabot.utils import misc
 
-import logging
 
 log = logging.getLogger("discord")
 
@@ -136,7 +136,8 @@ class Choices(commands.Cog):
     @commands.command(name="choose")
     async def choose(self, ctx, *, text: str):
         """
-        first argument can be numbers separated by forward slashes (i.e., 50/50), which can weight different options -- if this is left out, each option will be given equal weight
+        Chooses between one or more options, each separated by "or."
+        Can be optonally begun with numbers separated by forward slashes (i.e., 50/50), which weight different options -- if this is left out, each option will be given equal weight
         """
         textlist = text.split()
         if "/" in textlist[0]:

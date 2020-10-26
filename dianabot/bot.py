@@ -27,6 +27,7 @@ class DianaBot(commands.Bot):
             owner_id=self.config.owner_id,
             fetch_offline_members=True,
         )
+        self.config.start_up(self)
 
         print(f"Currently Running DianaBot v{self.version}")
 
@@ -34,6 +35,10 @@ class DianaBot(commands.Bot):
 
     async def on_ready(self):
         print("\n\nConnected!\n")
+
+        await self.config.establish_connection()
+
+        print("Database Connected!\n")
 
         if len(self.guilds) == 0:
             app_info = await self.application_info()
@@ -60,9 +65,7 @@ class DianaBot(commands.Bot):
         if self.config.debug:
             print(f"[SERVER] Joined {server.name} (Owner: {server.owner.name})")
 
-        # enabled_plugins = await self.get_plugins(server)
-        # for plugin in enabled_plugins:
-        #    self.loop.create_task(plugin.on_server_join(server))
+        await self.config.add_server(server.id)
 
     async def on_server_remove(self, server):
         if self.config.debug:

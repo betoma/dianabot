@@ -1,7 +1,7 @@
 import os
 import logging
 
-from dianabot import DianaBot
+from dianabot.bot import DianaBot
 
 
 def init_logging():
@@ -28,8 +28,7 @@ if __name__ == "__main__":
     log.info("Starting Diana Bot.")
 
     try:
-        dianabot = DianaBot()
-        dianabot.run(token)
+        diana = DianaBot()
+        diana.run(token)
     except:  # pylint: disable=bare-except
         log.error("Something went wrong during execution. Exiting...", exc_info=1)
-

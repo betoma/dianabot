@@ -3,7 +3,7 @@ import logging
 import discord
 from discord.ext import commands
 from dianabot.utils.aiopbwrap import AsyncPastebin
-from dianabot.utils.misc import is_author, message_embed
+from dianabot.utils.misc import is_author, message_embed, missing_from_config
 
 log = logging.getLogger("discord")
 
@@ -25,9 +25,34 @@ class Moderation(commands.Cog, command_attrs=dict(hidden=True)):
             text = f"Sorry {ctx.message.author.mention}, you're not a mod, so I don't have to listen to you!"
             await ctx.send(text)
 
-    @commands.command(name="laogai")
+    @commands.group(
+        name="laogai",
+        brief="puts users in the laogai channel to talk to mods about ongoing issues",
+    )
     @commands.has_permissions(administrator=True)
-    async def laogai(self, ctx, member: discord.Member, reason: str = None):
+    async def laogai(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send("This command requires a subcommand...")
+
+    @laogai.command(
+        name="invite",
+        brief="puts users in the laogai channel without restricting access elsewhere",
+    )
+    async def invite(self, ctx, member: discord.Member, reason: str = None):
+        if ctx.guild.id not in self.bot.config.laogai_lite_id:
+            raise missing_from_config
+        laogai_lite_role = ctx.guild.get_role(
+            self.bot.config.laogai_lite_id[ctx.guild.id]
+        )
+        await member.add_roles(laogai_lite_role, reason=reason)
+
+    @laogai.command(
+        name="trap",
+        brief="puts users in the laogai channel and restricts access to the rest of the server",
+    )
+    async def trap(self, ctx, member: discord.Member, reason: str = None):
+        if ctx.guild.id not in self.bot.config.laogai_id:
+            raise missing_from_config
         laogai_role = ctx.guild.get_role(self.bot.config.laogai_id[ctx.guild.id])
         await member.add_roles(laogai_role, reason=reason)
 
@@ -38,6 +63,8 @@ class Moderation(commands.Cog, command_attrs=dict(hidden=True)):
             text = f"Sorry {ctx.message.author.mention}, you're not a mod, so you can't do that!"
         elif isinstance(error, discord.Forbidden):
             text = "Sorry, I don't have permission to do that :pensive: A mod needs to give me the 'Manage Roles' permission."
+        elif isinstance(error, missing_from_config):
+            text = "Sorry, I haven't been configured with the role to use with that command. A mod needs to configure that before I can use this command."
         if text:
             await ctx.send(text)
 
@@ -56,12 +83,8 @@ class Moderation(commands.Cog, command_attrs=dict(hidden=True)):
         use in the channel where you want the ultimate pastebin link to be posted
         requires bot to have read_message_history permissions
         """
-        if (
-            self.bot.config.pastebin_dev_key is None
-        ):  # need to implement this into config (since you need to rewrite config anyway)
-            await ctx.send(
-                "Sorry, I haven't been given a proper pastebin API dev key, so I can't take logs that way."
-            )
+        if ctx.guild.id not in self.bot.config.pastebin_dev_key:
+            raise missing_from_config
         else:
             async with channel.typing():
                 log_list = []
@@ -91,7 +114,7 @@ class Moderation(commands.Cog, command_attrs=dict(hidden=True)):
                     # if (reacts := mess.reactions):
                     # implement later
                 textfile = "\n".join(log_list)
-                pb = AsyncPastebin(self.bot.config.pastebin_dev_key)
+                pb = AsyncPastebin(self.bot.config.pastebin_dev_key[ctx.guild.id])
                 pasted_url = await pb.create_paste(
                     textfile,
                     api_paste_private=1,
@@ -107,6 +130,8 @@ class Moderation(commands.Cog, command_attrs=dict(hidden=True)):
             text = "Sorry, I don't have permissions to get channel message history, so I'm unable to do that."
         elif isinstance(error, discord.HTTPException):
             text = "Sorry, something went wrong with Discord and my attempt to get the message history failed."
+        elif isinstance(error, missing_from_config):
+            text = "Sorry, I haven't been configured with the appropriate pastebin ID. A mod must configure that before I can use this command."
         if text:
             await ctx.send(text)
 
