@@ -29,6 +29,14 @@ class Config:
         self.laogai_lite_id = {}
         self.wanshitong = defaultdict(list)
 
+        self.VAR_TAB = {
+            "ModRole": self.mod_role,
+            "ModNotifChannel": self.mod_notif_channel,
+            "PastebinKey": self.pastebin_dev_key,
+            "LaogaiRole": self.laogai_id,
+            "LaogaiLiteRole": self.laogai_lite_id,
+        }
+
     def start_up(self, bot):
         self.bot = bot
 
@@ -39,13 +47,10 @@ class Config:
         try:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "CREATE TABLE IF NOT EXISTS `Servers` (`ServerId` TEXT NOT NULL, `ModRole` TEXT, `ModNotifChannel` TEXT, `PastebinKey` TEXT, PRIMARY KEY (`ServerId`))"
+                    "CREATE TABLE IF NOT EXISTS `Servers` (`ServerId` TEXT NOT NULL, `ModRole` TEXT, `ModNotifChannel` TEXT, `PastebinKey` TEXT, `LaogaiRole` TEXT, `LaogaiLiteRole` TEXT, PRIMARY KEY (`ServerId`))"
                 )
                 cursor.execute(
                     "CREATE TABLE IF NOT EXISTS `Prefixes` (`ServerId` TEXT NOT NULL, `Prefix` TEXT NOT NULL, PRIMARY KEY (`ServerId`, `Prefix`), FOREIGN KEY (`ServerId`) REFERENCES `Servers`(`ServerId`))"
-                )
-                cursor.execute(
-                    "CREATE TABLE IF NOT EXISTS `Laogai` (`ServerId` TEXT NOT NULL, `LaogaiRole` TEXT, `LaogaiLiteRole` TEXT, PRIMARY KEY (`ServerId`), FOREIGN KEY (`ServerId`) REFERENCES `Servers`(`ServerId`))"
                 )
                 cursor.execute(
                     "CREATE TABLE IF NOT EXISTS `Greylist` (`ServerId` TEXT NOT NULL, `Word` TEXT NOT NULL, `Channel` TEXT NOT NULL, `Ping` BOOL, PRIMARY KEY (`ServerId`, `Channel`), FOREIGN KEY (`ServerId`) REFERENCES `Servers`(`ServerId`))"
@@ -76,8 +81,6 @@ class Config:
                     self.pastebin_dev_key[row["ServerId"]] = row["PastebinKey"]
                     self.mod_role[row["ServerId"]] = row["ModRole"]
                     self.mod_notif_channel[row["ServerId"]] = row["ModNotifChannel"]
-                cursor.execute("SELECT * from `Laogai`")
-                for row in cursor.fetchall():
                     self.laogai_id[row["ServerId"]] = row["LaogaiRole"]
                     self.laogai_lite_id[row["ServerId"]] = row["LaogaiLiteRole"]
                 cursor.execute("SELECT * FROM `Greylist`")
@@ -110,6 +113,62 @@ class Config:
                 )
                 if not await cursor.fetchone():
                     await cursor.execute(
-                        f"INSERT INTO `Servers` (`ServerId`) VALUES ({server_id})"
+                        f"INSERT INTO `Servers` (`ServerId`) VALUES ('{server_id}')"
                     )
                     await conn.commit()
+
+    async def close_connection(self):
+        self.pool.close()
+        await self.pool.wait_closed()
+
+    async def add_value(
+        self,
+        server_id,
+        table,
+        value,
+        variable: str = None,
+        channel: str = None,
+        pingable: bool = None,
+        user: str = None,
+        date=None,
+        desc: str = None,
+        mod: str = None,
+    ):
+        if table == "Servers":
+            if variable not in self.VAR_TAB:
+                raise ValueError
+            async with self.pool.acquire() as conn:
+                async with conn.cursor() as cursor:
+                    await cursor.execute(
+                        f"UPDATE `{table}` SET `{variable}`='{value}' WHERE `ServerId` = '{server_id}'"
+                    )
+                    await conn.commit()
+            self.VAR_TAB[variable] = value
+        elif table in {"Prefixes", "Greylist", "Wanshitong"}:
+            if table == "Prefixes":
+                self.prefixes[server_id].append(value)
+                variables = "`ServerId`, `Prefix`"
+                values = f"'{server_id}', '{value}'"
+            elif table == "Greylist":
+                self.greylist[server_id][channel][value] = pingable
+                variables = "`ServerId`,`Word`,`Channel`,`Ping`"
+                values = f"'{server_id}', '{value}', '{channel}', '{pingable}'"
+            elif table == "Wanshitong":
+                self.wanshitong[server_id].append(
+                    {
+                        "user": user,
+                        "date": date,
+                        "description": desc,
+                        "reporting mod": mod,
+                    }
+                )
+                variables = "`ServerId`, `User`, `Date`, `Description`, `ReportingMod`"
+                values = f"'{server_id}', '{user}','{date}', '{desc}', '{mod}'"
+            async with self.pool.acquire() as conn:
+                async with conn.cursor() as cursor:
+                    await cursor.execute(
+                        f"INSERT INTO `{table}` ({variables}) VALUES ({values})"
+                    )
+                    await conn.commit()
+        else:
+            raise ValueError("You must select a valid table name.")
