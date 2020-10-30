@@ -172,3 +172,40 @@ class Config:
                     await conn.commit()
         else:
             raise ValueError("You must select a valid table name.")
+
+    async def remove_value(
+        self,
+        server_id: str,
+        table: str,
+        variable: str,
+        value: str = None,
+    ):
+        if table == "Servers":
+            if variable not in self.VAR_TAB:
+                raise ValueError("Invalid variable choice.")
+            if variable == "ServerId":
+                raise ValueError("Cannot remove ServerId variable.")
+            async with self.pool.acquire() as conn:
+                async with conn.cursor() as cursor:
+                    await cursor.execute(
+                        f"UPDATE `{table}` SET `{variable}`= NULL WHERE `ServerId` = '{server_id}'"
+                    )
+                    await conn.commit()
+        elif table in {"Prefixes", "Greylist", "Wanshitong"}:
+            async with self.pool.acquire() as conn:
+                async with conn.cursor() as cursor:
+                    await cursor.execute(
+                        f"DELETE FROM `{table}` WHERE `ServerId` = '{server_id}' AND `{variable}` = {value}"
+                    )
+                    await conn.commit()
+        else:
+            raise ValueError("You must select a valid table name.")
+
+    async def wipe_server(self, server_id):
+        async with self.pool.acquire() as conn:
+            async with conn.cursor() as cursor:
+                for table in {"Servers", "Prefixes", "Greylist", "Wanshitong"}:
+                    await cursor.execute(
+                        f"DELETE FROM `{table}` WHERE `ServerId` = '{server_id}'"
+                    )
+                await conn.commit()
