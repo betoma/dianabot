@@ -13,6 +13,7 @@ class Ownership(commands.Cog, command_attrs=dict(hidden=True)):
     @commands.command(name="shutdown", hidden=True)
     @commands.is_owner()
     async def shutdown(self):
+        await self.bot.config.close_connection()
         await self.bot.logout()
 
     @shutdown.error

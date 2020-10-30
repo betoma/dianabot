@@ -74,6 +74,5 @@ def message_embed(msg):
 
     return embed
 
-
 class missing_from_config(commands.CommandError):
     pass

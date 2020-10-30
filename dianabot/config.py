@@ -27,7 +27,7 @@ class Config:
         self.mod_role = {}
         self.laogai_id = {}
         self.laogai_lite_id = {}
-        self.wanshitong = defaultdict(list)
+        self.wanshitong = defaultdict(lambda: defaultdict(list))
 
         self.VAR_TAB = {
             "ModRole": self.mod_role,
@@ -90,9 +90,8 @@ class Config:
                     ]
                 cursor.execute("SELECT * from `Wanshitong`")
                 for row in cursor.fetchall():
-                    self.wanshitong[row["ServerId"]].append(
+                    self.wanshitong[row["ServerId"]][row["User"]].append(
                         {
-                            "user": row["User"],
                             "date": row["Date"],
                             "description": row["Description"],
                             "reporting mod": row["ReportingMod"],
@@ -154,9 +153,8 @@ class Config:
                 variables = "`ServerId`,`Word`,`Channel`,`Ping`"
                 values = f"'{server_id}', '{value}', '{channel}', '{pingable}'"
             elif table == "Wanshitong":
-                self.wanshitong[server_id].append(
+                self.wanshitong[server_id][user].append(
                     {
-                        "user": user,
                         "date": date,
                         "description": desc,
                         "reporting mod": mod,
@@ -179,6 +177,8 @@ class Config:
         table: str,
         variable: str,
         value: str = None,
+        spec_var: str = None,
+        spec_val: str = None,
     ):
         if table == "Servers":
             if variable not in self.VAR_TAB:
@@ -192,11 +192,12 @@ class Config:
                     )
                     await conn.commit()
         elif table in {"Prefixes", "Greylist", "Wanshitong"}:
+            send = f"DELETE FROM `{table}` WHERE `ServerId` = '{server_id}' AND `{variable}` = {value}"
+            if spec_var and spec_val:
+                send += f" AND `{spec_var}` = {spec_val}"
             async with self.pool.acquire() as conn:
                 async with conn.cursor() as cursor:
-                    await cursor.execute(
-                        f"DELETE FROM `{table}` WHERE `ServerId` = '{server_id}' AND `{variable}` = {value}"
-                    )
+                    await cursor.execute(send)
                     await conn.commit()
         else:
             raise ValueError("You must select a valid table name.")

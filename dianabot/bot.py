@@ -61,15 +61,17 @@ class DianaBot(commands.Bot):
             activity=default_activity, status=discord.Status.online
         )
 
-    async def on_server_join(self, server):
+    async def on_guild_join(self, server):
         if self.config.debug:
             print(f"[SERVER] Joined {server.name} (Owner: {server.owner.name})")
 
         await self.config.add_server(server.id)
 
-    async def on_server_remove(self, server):
+    async def on_guild_remove(self, server):
         if self.config.debug:
             print(f"[SERVER] Left {server.name} (Owner: {server.owner.name})")
+
+        await self.config.wipe_server(server.id)
 
     @bot.listen()
     async def on_message(self, message):

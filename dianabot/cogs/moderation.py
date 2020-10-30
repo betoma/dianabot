@@ -207,8 +207,57 @@ class GreyList(commands.Cog, command_attrs=dict(hidden=True)):
                         embed=message_embed(message),
                     )
 
-        # add commands to add and remove items from the greylist (both universally and channel-specifically) as well as change pingability
-        # but you should probably stop procrastinating on writing Config() before you do that.
+    @commands.group(
+        name="greylist",
+        brief="controls the list of words the mods want to keep track of people saying",
+    )
+    @commands.has_permissions(administrator=True)
+    async def greylist(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send("This command requires a subcommand...")
+
+    @greylist.command(name="add", brief="adds words to the greylist")
+    async def grey_add(
+        self, ctx, word: str, pingable: bool, channel: discord.TextChannel = None
+    ):
+        if ctx.guild.id not in self.bot.config.mod_notif_channel:
+            raise missing_from_config
+        async with ctx.message.channel.typing():
+            if channel == None:
+                channel_id = "all"
+            else:
+                channel_id = channel.id
+            try:
+                await self.bot.config.add_value(
+                    ctx.guild.id,
+                    "Greylist",
+                    word,
+                    channel=channel_id,
+                    pingable=pingable,
+                )
+            except:  # pylint: disable=bare-except
+                await ctx.send(
+                    "Something went wrong. I cannot add this value to the greylist for this server."
+                )
+            else:
+                string = f"'{word}' added to the greylist "
+                if channel == None:
+                    string += "for this server."
+                else:
+                    string += f"for {channel.mention}."
+                await ctx.send(string)
+
+    @greylist.error
+    async def grey_error(self, error, ctx):
+        text = None
+        if isinstance(error, commands.MissingPermissions):
+            text = f"Sorry {ctx.message.author.mention}, you're not a mod, so you can't do that!"
+        elif isinstance(error, discord.Forbidden):
+            text = "Sorry, I don't have permission to do that :pensive: A mod needs to give me the right permissions."
+        elif isinstance(error, missing_from_config):
+            text = "Sorry, I haven't been configured with the channel to use with that command. A mod needs to configure that before I can use this command."
+        if text:
+            await ctx.send(text)
 
 
 def setup(bot):

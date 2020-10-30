@@ -24,7 +24,7 @@ class Information(commands.Cog):
         Get the permissions of a mentioned user.
         """
         if user.id == self.bot.user.id:
-            perms_message = f"I'm {self.bot.config.bot_name[ctx.guild.id]}! I'm a bot."
+            perms_message = f"I'm {self.bot.config.bot_name}! I'm a bot."
         else:
             if user == ctx.author:
                 perms_message = "you are "
