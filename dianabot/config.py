@@ -191,6 +191,7 @@ class Config:
                         f"UPDATE `{table}` SET `{variable}`= NULL WHERE `ServerId` = '{server_id}'"
                     )
                     await conn.commit()
+            del self.VAR_TAB[variable][server_id]
         elif table in {"Prefixes", "Greylist", "Wanshitong"}:
             send = f"DELETE FROM `{table}` WHERE `ServerId` = '{server_id}' AND `{variable}` = {value}"
             if spec_var and spec_val:
@@ -199,6 +200,19 @@ class Config:
                 async with conn.cursor() as cursor:
                     await cursor.execute(send)
                     await conn.commit()
+            if table == "Prefixes":
+                self.prefixes[server_id].remove(value)
+            elif table == "Greylist":
+                if spec_var and spec_val:
+                    del self.greylist[server_id][spec_val][value]
+                    if not self.greylist[server_id][spec_val]:
+                        del self.greylist[server_id][spec_val]
+                else:
+                    for channel in self.greylist[server_id]:
+                        if value in self.greylist[server_id][channel]:
+                            del self.greylist[server_id][channel][value]
+            elif table == "Wanshitong":
+                pass
         else:
             raise ValueError("You must select a valid table name.")
 

@@ -3,7 +3,12 @@ import logging
 import discord
 from discord.ext import commands
 from dianabot.utils.aiopbwrap import AsyncPastebin
-from dianabot.utils.misc import is_author, message_embed, missing_from_config
+from dianabot.utils.misc import (
+    is_author,
+    message_embed,
+    missing_from_config,
+    word_not_in_there,
+)
 
 log = logging.getLogger("discord")
 
@@ -216,7 +221,7 @@ class GreyList(commands.Cog, command_attrs=dict(hidden=True)):
         if ctx.invoked_subcommand is None:
             await ctx.send("This command requires a subcommand...")
 
-    @greylist.command(name="add", brief="adds words to the greylist")
+    @greylist.command(name="add", brief="add a word to the greylist")
     async def grey_add(
         self, ctx, word: str, pingable: bool, channel: discord.TextChannel = None
     ):
@@ -247,6 +252,76 @@ class GreyList(commands.Cog, command_attrs=dict(hidden=True)):
                     string += f"for {channel.mention}."
                 await ctx.send(string)
 
+    @greylist.command(name="remove", brief="removes a word from the greylist")
+    async def grey_rem(self, ctx, word: str, channel: discord.TextChannel = None):
+        async with ctx.message.channel.typing():
+            if channel == None:
+                try:
+                    await self.bot.config.remove_value(
+                        ctx.guild.id, "Greylist", "Word", value=f"'{word}'"
+                    )
+                except:  # pylint: disable=bare-except
+                    await ctx.send(
+                        "Something went wrong. I cannot remove this value from the greylist for this server."
+                    )
+                else:
+                    await ctx.send(
+                        f"'{word}' removed from the greylist for this server."
+                    )
+            else:
+                if (
+                    channel.id in self.bot.config.greylist[ctx.guild.id]
+                    and word in self.bot.config.greylist[ctx.guild.id][channel.id]
+                ):
+                    try:
+                        await self.bot.config.remove_value(
+                            ctx.guild.id,
+                            "Greylist",
+                            "Word",
+                            value=f"'{word}'",
+                            spec_var="Channel",
+                            spec_val=f"'{channel.id}'",
+                        )
+                    except:  # pylint: disable=bare-except
+                        await ctx.send(
+                            "Something went wrong. I cannot remove this value from the greylist for this server."
+                        )
+                    else:
+                        await ctx.send(
+                            f"'{word}' removed from the greylist for {channel.mention}."
+                        )
+                elif word in self.bot.config.greylist[ctx.guild.id]["all"]:
+                    p = self.bot.config.greylist[ctx.guild.id]["all"][word]
+                    ch_list = []
+                    ch_str_list = []
+                    for chl in ctx.guild.text_channels:
+                        if not chl.id == channel.id:
+                            ch_list.append(chl.id)
+                            ch_str_list.append(chl.mention)
+                    try:
+                        await self.bot.config.remove_value(
+                            ctx.guild.id, "Greylist", "Word", value=f"'{word}'"
+                        )
+                        for chl in ch_list:
+                            await self.bot.config.add_value(
+                                ctx.guild.id,
+                                "Greylist",
+                                word,
+                                channel=chl,
+                                pingable=p,
+                            )
+                    except:  # pylint: disable=bare-except
+                        await ctx.send(
+                            "Something went wrong. I cannot remove this value from the greylist for this server."
+                        )
+                    else:
+                        ch = ", ".join(ch_str_list)
+                        await ctx.send(
+                            f"'{word}' remove from the greylist for {channel.mention}. It remains on the greylist for {ch}."
+                        )
+                else:
+                    raise word_not_in_there
+
     @greylist.error
     async def grey_error(self, error, ctx):
         text = None
@@ -256,6 +331,8 @@ class GreyList(commands.Cog, command_attrs=dict(hidden=True)):
             text = "Sorry, I don't have permission to do that :pensive: A mod needs to give me the right permissions."
         elif isinstance(error, missing_from_config):
             text = "Sorry, I haven't been configured with the channel to use with that command. A mod needs to configure that before I can use this command."
+        elif isinstance(error, word_not_in_there):
+            text = "Sorry, that word isn't present in my databases for this server."
         if text:
             await ctx.send(text)
 
